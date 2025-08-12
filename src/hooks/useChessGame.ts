@@ -107,30 +107,40 @@ export function useChessGame() {
 
   const makeAIMove = useCallback(async () => {
     if (gameMode !== 'human-vs-ai' || gameState.turn !== 'b' || isAIThinking || gameState.isGameOver) {
+      console.log('AI move conditions not met:', {
+        gameMode,
+        turn: gameState.turn,
+        isAIThinking,
+        isGameOver: gameState.isGameOver
+      });
       return;
     }
 
+    console.log('Starting AI move...');
     setIsAIThinking(true);
     
     try {
       const fen = chessGame.getFEN();
+      console.log('Current FEN:', fen);
       const aiMove = await stockfishAI.getBestMove(fen, aiDifficulty);
       
-      if (aiMove && aiMove !== '(none)' && aiMove !== '') {
-        // Parse UCI move format (e.g., "e2e4")
-        const from = aiMove.slice(0, 2);
-        const to = aiMove.slice(2, 4);
+      console.log('AI selected move:', aiMove);
+      
+      if (aiMove) {
+        // Use from/to notation to make the move
+        const success = chessGame.makeMoveFromTo(aiMove.from, aiMove.to, aiMove.promotion);
         
-        const fromCoords: [number, number] = [
-          '87654321'.indexOf(from[1]),
-          'abcdefgh'.indexOf(from[0])
-        ];
-        const toCoords: [number, number] = [
-          '87654321'.indexOf(to[1]),
-          'abcdefgh'.indexOf(to[0])
-        ];
-        
-        makeMove(fromCoords, toCoords);
+        if (success) {
+          console.log('AI move successful:', aiMove);
+          setGameState(prev => ({
+            ...prev,
+            selectedSquare: null,
+            possibleMoves: []
+          }));
+          updateGameState();
+        } else {
+          console.error('AI move failed:', aiMove);
+        }
       } else {
         console.log('AI could not find a valid move');
       }
@@ -139,7 +149,7 @@ export function useChessGame() {
     } finally {
       setIsAIThinking(false);
     }
-  }, [gameMode, gameState.turn, isAIThinking, chessGame, stockfishAI, aiDifficulty, makeMove]);
+  }, [gameMode, gameState.turn, gameState.isGameOver, isAIThinking, chessGame, stockfishAI, aiDifficulty, updateGameState]);
 
   const resetGame = useCallback(() => {
     chessGame.reset();
@@ -154,21 +164,31 @@ export function useChessGame() {
       capturedPieces: { white: [], black: [] },
       lastMove: null
     });
+    setIsAIThinking(false);
   }, [chessGame]);
 
   // Auto-make AI move when it's AI's turn
   useEffect(() => {
+    console.log('Effect triggered:', {
+      gameMode,
+      turn: gameState.turn,
+      isGameOver: gameState.isGameOver,
+      isAIThinking
+    });
+    
     if (gameMode === 'human-vs-ai' && 
         gameState.turn === 'b' && 
         !gameState.isGameOver && 
         !isAIThinking) {
+      console.log('Setting timer for AI move...');
       const timer = setTimeout(() => {
+        console.log('Timer fired, making AI move...');
         makeAIMove();
-      }, 800); // Small delay for better UX
+      }, 500); // Small delay for better UX
       
       return () => clearTimeout(timer);
     }
-  }, [gameMode, gameState.turn, gameState.isGameOver, isAIThinking, makeAIMove, gameState.board]);
+  }, [gameMode, gameState.turn, gameState.isGameOver, isAIThinking, makeAIMove]);
 
   // Cleanup AI on unmount
   useEffect(() => {

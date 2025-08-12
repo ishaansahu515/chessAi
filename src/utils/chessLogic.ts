@@ -40,7 +40,7 @@ export class ChessGame {
     return [row, col];
   }
 
-  makeMove(from: [number, number], to: [number, number]): boolean {
+  makeMove(from: [number, number], to: [number, number], promotion?: string): boolean {
     const fromSquare = this.getSquareName(from[0], from[1]);
     const toSquare = this.getSquareName(to[0], to[1]);
     
@@ -48,10 +48,25 @@ export class ChessGame {
       const move = this.chess.move({
         from: fromSquare,
         to: toSquare,
-        promotion: 'q' // Auto-promote to queen
+        promotion: promotion || 'q' // Auto-promote to queen if not specified
       });
       return move !== null;
     } catch {
+      return false;
+    }
+  }
+
+  // Make move using from/to notation (for AI moves)
+  makeMoveFromTo(from: string, to: string, promotion?: string): boolean {
+    try {
+      const move = this.chess.move({
+        from: from,
+        to: to,
+        promotion: promotion || 'q'
+      });
+      return move !== null;
+    } catch (error) {
+      console.error('Invalid move:', from, 'to', to, error);
       return false;
     }
   }
@@ -61,6 +76,11 @@ export class ChessGame {
     const moves = this.chess.moves({ square, verbose: true });
     
     return moves.map(move => this.getCoordinates(move.to));
+  }
+
+  // Get all legal moves for current position
+  getAllLegalMoves(): string[] {
+    return this.chess.moves();
   }
 
   getTurn(): PieceColor {
@@ -80,6 +100,25 @@ export class ChessGame {
 
   isInCheck(): boolean {
     return this.chess.inCheck();
+  }
+
+  // Check if castling is available
+  canCastle(): { kingside: boolean; queenside: boolean } {
+    const moves = this.chess.moves({ verbose: true });
+    const castlingMoves = moves.filter(move => move.flags.includes('k') || move.flags.includes('q'));
+    
+    return {
+      kingside: castlingMoves.some(move => move.flags.includes('k')),
+      queenside: castlingMoves.some(move => move.flags.includes('q'))
+    };
+  }
+
+  // Check if en passant is available
+  getEnPassantSquare(): string | null {
+    const fen = this.chess.fen();
+    const fenParts = fen.split(' ');
+    const enPassant = fenParts[3];
+    return enPassant === '-' ? null : enPassant;
   }
 
   getMoveHistory(): string[] {
@@ -133,5 +172,30 @@ export class ChessGame {
     }
     
     return captured;
+  }
+
+  // Get move details for special moves visualization
+  getMoveDetails(from: [number, number], to: [number, number]): {
+    isCapture: boolean;
+    isCastling: boolean;
+    isEnPassant: boolean;
+    isPromotion: boolean;
+  } {
+    const fromSquare = this.getSquareName(from[0], from[1]);
+    const toSquare = this.getSquareName(to[0], to[1]);
+    
+    const moves = this.chess.moves({ square: fromSquare, verbose: true });
+    const move = moves.find(m => m.to === toSquare);
+    
+    if (!move) {
+      return { isCapture: false, isCastling: false, isEnPassant: false, isPromotion: false };
+    }
+    
+    return {
+      isCapture: !!move.captured,
+      isCastling: move.flags.includes('k') || move.flags.includes('q'),
+      isEnPassant: move.flags.includes('e'),
+      isPromotion: move.flags.includes('p')
+    };
   }
 }
