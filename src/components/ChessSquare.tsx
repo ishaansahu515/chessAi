@@ -54,7 +54,7 @@ export function ChessSquare({
   return (
     <div
       className={`
-        aspect-square flex items-center justify-center relative cursor-pointer
+        w-12 h-12 md:w-16 md:h-16 flex items-center justify-center relative cursor-pointer
         transition-colors duration-200 ${getSquareColor()}
         hover:brightness-110
       `}
@@ -77,11 +77,11 @@ export function ChessSquare({
         <div 
           className={`
             absolute inset-0 flex items-center justify-center
-            ${piece ? 'border-4 border-green-500 rounded-full' : ''}
+            ${piece ? 'border-2 md:border-4 border-green-500 rounded-full' : ''}
           `}
         >
           {!piece && (
-            <div className="w-4 h-4 bg-green-500 rounded-full opacity-60" />
+            <div className="w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full opacity-60" />
           )}
         </div>
       )}

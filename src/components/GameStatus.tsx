@@ -27,6 +27,10 @@ export function GameStatus({ gameState, isAIThinking }: GameStatusProps) {
       return 'AI is thinking...';
     }
     
+    if (gameState.turn === 'b') {
+      return "Black's turn";
+    }
+    
     return `${getCurrentPlayer()}'s turn`;
   };
 

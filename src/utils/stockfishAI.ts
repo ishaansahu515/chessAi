@@ -2,9 +2,7 @@ import { AIDifficulty } from '../types/chess';
 import { Chess } from 'chess.js';
 
 export class StockfishAI {
-  private stockfish: Worker | null = null;
   private isReady = false;
-  private currentCallback: ((move: string) => void) | null = null;
 
   constructor() {
     this.initStockfish();
@@ -12,9 +10,8 @@ export class StockfishAI {
 
   private async initStockfish(): Promise<void> {
     try {
-      // Create a simple AI that uses chess.js for move generation
       this.isReady = true;
-      console.log('AI initialized with fallback random move generator');
+      console.log('AI initialized with chess.js move generator');
     } catch (error) {
       console.error('Failed to initialize AI:', error);
       this.isReady = true;
@@ -50,17 +47,20 @@ export class StockfishAI {
             break;
             
           case 'medium':
-            // Prefer captures and checks
+            // Prefer captures, checks, and castling
             const captures = moves.filter(move => move.captured);
             const checks = moves.filter(move => {
               const testChess = new Chess(fen);
               testChess.move(move);
               return testChess.inCheck();
             });
+            const castling = moves.filter(move => move.flags.includes('k') || move.flags.includes('q'));
             
-            if (captures.length > 0 && Math.random() > 0.3) {
+            if (castling.length > 0 && Math.random() > 0.7) {
+              selectedMove = castling[Math.floor(Math.random() * castling.length)];
+            } else if (captures.length > 0 && Math.random() > 0.4) {
               selectedMove = captures[Math.floor(Math.random() * captures.length)];
-            } else if (checks.length > 0 && Math.random() > 0.5) {
+            } else if (checks.length > 0 && Math.random() > 0.6) {
               selectedMove = checks[Math.floor(Math.random() * checks.length)];
             } else {
               selectedMove = moves[Math.floor(Math.random() * moves.length)];
@@ -68,21 +68,23 @@ export class StockfishAI {
             break;
             
           case 'hard':
-            // More strategic: prefer center control, development, and tactics
+            // More strategic: prefer center control, development, tactics, and special moves
             const centerMoves = moves.filter(move => 
               ['e4', 'e5', 'd4', 'd5', 'c4', 'c5', 'f4', 'f5'].includes(move.to)
             );
             const developmentMoves = moves.filter(move => 
               ['n', 'b'].includes(move.piece) && 
-              !['a', 'h'].includes(move.to[0]) // Avoid edge moves
+              !['a1', 'a8', 'h1', 'h8'].includes(move.to)
             );
-            const tacticalMoves = moves.filter(move => move.captured || move.promotion);
+            const tacticalMoves = moves.filter(move => 
+              move.captured || move.promotion || move.flags.includes('k') || move.flags.includes('q') || move.flags.includes('e')
+            );
             
-            if (tacticalMoves.length > 0 && Math.random() > 0.2) {
+            if (tacticalMoves.length > 0 && Math.random() > 0.3) {
               selectedMove = tacticalMoves[Math.floor(Math.random() * tacticalMoves.length)];
-            } else if (centerMoves.length > 0 && Math.random() > 0.4) {
+            } else if (centerMoves.length > 0 && Math.random() > 0.5) {
               selectedMove = centerMoves[Math.floor(Math.random() * centerMoves.length)];
-            } else if (developmentMoves.length > 0 && Math.random() > 0.3) {
+            } else if (developmentMoves.length > 0 && Math.random() > 0.4) {
               selectedMove = developmentMoves[Math.floor(Math.random() * developmentMoves.length)];
             } else {
               selectedMove = moves[Math.floor(Math.random() * moves.length)];
@@ -93,8 +95,8 @@ export class StockfishAI {
             selectedMove = moves[Math.floor(Math.random() * moves.length)];
         }
         
-        const uciMove = selectedMove.from + selectedMove.to + (selectedMove.promotion || '');
-        resolve(uciMove);
+        // Return the move in SAN notation (Standard Algebraic Notation)
+        resolve(selectedMove.san);
       }, thinkingTime);
     });
   }
@@ -109,11 +111,6 @@ export class StockfishAI {
   }
 
   destroy(): void {
-    if (this.stockfish) {
-      this.stockfish.terminate();
-      this.stockfish = null;
-    }
     this.isReady = false;
-    this.currentCallback = null;
   }
 }

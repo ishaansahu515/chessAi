@@ -114,23 +114,25 @@ export function useChessGame() {
     
     try {
       const fen = chessGame.getFEN();
-      const aiMove = await stockfishAI.getBestMove(fen, aiDifficulty);
+      const aiMoveSAN = await stockfishAI.getBestMove(fen, aiDifficulty);
       
-      if (aiMove && aiMove !== '(none)' && aiMove !== '') {
-        // Parse UCI move format (e.g., "e2e4")
-        const from = aiMove.slice(0, 2);
-        const to = aiMove.slice(2, 4);
+      console.log('AI selected move:', aiMoveSAN);
+      
+      if (aiMoveSAN && aiMoveSAN !== '(none)' && aiMoveSAN !== '') {
+        // Use SAN notation to make the move
+        const success = chessGame.makeMoveSAN(aiMoveSAN);
         
-        const fromCoords: [number, number] = [
-          '87654321'.indexOf(from[1]),
-          'abcdefgh'.indexOf(from[0])
-        ];
-        const toCoords: [number, number] = [
-          '87654321'.indexOf(to[1]),
-          'abcdefgh'.indexOf(to[0])
-        ];
-        
-        makeMove(fromCoords, toCoords);
+        if (success) {
+          setGameState(prev => ({
+            ...prev,
+            selectedSquare: null,
+            possibleMoves: []
+          }));
+          updateGameState();
+          console.log('AI move successful:', aiMoveSAN);
+        } else {
+          console.error('AI move failed:', aiMoveSAN);
+        }
       } else {
         console.log('AI could not find a valid move');
       }
@@ -139,7 +141,7 @@ export function useChessGame() {
     } finally {
       setIsAIThinking(false);
     }
-  }, [gameMode, gameState.turn, isAIThinking, chessGame, stockfishAI, aiDifficulty, makeMove]);
+  }, [gameMode, gameState.turn, gameState.isGameOver, isAIThinking, chessGame, stockfishAI, aiDifficulty, updateGameState]);
 
   const resetGame = useCallback(() => {
     chessGame.reset();
@@ -154,6 +156,7 @@ export function useChessGame() {
       capturedPieces: { white: [], black: [] },
       lastMove: null
     });
+    setIsAIThinking(false);
   }, [chessGame]);
 
   // Auto-make AI move when it's AI's turn
@@ -168,7 +171,7 @@ export function useChessGame() {
       
       return () => clearTimeout(timer);
     }
-  }, [gameMode, gameState.turn, gameState.isGameOver, isAIThinking, makeAIMove, gameState.board]);
+  }, [gameMode, gameState.turn, gameState.isGameOver, isAIThinking, makeAIMove]);
 
   // Cleanup AI on unmount
   useEffect(() => {
