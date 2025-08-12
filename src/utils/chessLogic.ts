@@ -56,13 +56,17 @@ export class ChessGame {
     }
   }
 
-  // Make move using SAN notation (for AI moves)
-  makeMoveSAN(san: string): boolean {
+  // Make move using from/to notation (for AI moves)
+  makeMoveFromTo(from: string, to: string, promotion?: string): boolean {
     try {
-      const move = this.chess.move(san);
+      const move = this.chess.move({
+        from: from,
+        to: to,
+        promotion: promotion || 'q'
+      });
       return move !== null;
     } catch (error) {
-      console.error('Invalid SAN move:', san, error);
+      console.error('Invalid move:', from, 'to', to, error);
       return false;
     }
   }

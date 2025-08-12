@@ -107,31 +107,39 @@ export function useChessGame() {
 
   const makeAIMove = useCallback(async () => {
     if (gameMode !== 'human-vs-ai' || gameState.turn !== 'b' || isAIThinking || gameState.isGameOver) {
+      console.log('AI move conditions not met:', {
+        gameMode,
+        turn: gameState.turn,
+        isAIThinking,
+        isGameOver: gameState.isGameOver
+      });
       return;
     }
 
+    console.log('Starting AI move...');
     setIsAIThinking(true);
     
     try {
       const fen = chessGame.getFEN();
-      const aiMoveSAN = await stockfishAI.getBestMove(fen, aiDifficulty);
+      console.log('Current FEN:', fen);
+      const aiMove = await stockfishAI.getBestMove(fen, aiDifficulty);
       
-      console.log('AI selected move:', aiMoveSAN);
+      console.log('AI selected move:', aiMove);
       
-      if (aiMoveSAN && aiMoveSAN !== '(none)' && aiMoveSAN !== '') {
-        // Use SAN notation to make the move
-        const success = chessGame.makeMoveSAN(aiMoveSAN);
+      if (aiMove) {
+        // Use from/to notation to make the move
+        const success = chessGame.makeMoveFromTo(aiMove.from, aiMove.to, aiMove.promotion);
         
         if (success) {
+          console.log('AI move successful:', aiMove);
           setGameState(prev => ({
             ...prev,
             selectedSquare: null,
             possibleMoves: []
           }));
           updateGameState();
-          console.log('AI move successful:', aiMoveSAN);
         } else {
-          console.error('AI move failed:', aiMoveSAN);
+          console.error('AI move failed:', aiMove);
         }
       } else {
         console.log('AI could not find a valid move');
@@ -161,13 +169,22 @@ export function useChessGame() {
 
   // Auto-make AI move when it's AI's turn
   useEffect(() => {
+    console.log('Effect triggered:', {
+      gameMode,
+      turn: gameState.turn,
+      isGameOver: gameState.isGameOver,
+      isAIThinking
+    });
+    
     if (gameMode === 'human-vs-ai' && 
         gameState.turn === 'b' && 
         !gameState.isGameOver && 
         !isAIThinking) {
+      console.log('Setting timer for AI move...');
       const timer = setTimeout(() => {
+        console.log('Timer fired, making AI move...');
         makeAIMove();
-      }, 800); // Small delay for better UX
+      }, 500); // Small delay for better UX
       
       return () => clearTimeout(timer);
     }
