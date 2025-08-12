@@ -28,3 +28,18 @@ export interface GameState {
 
 export type GameMode = 'human-vs-human' | 'human-vs-ai';
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
+
+export interface OnlinePlayer {
+  id: string;
+  name: string;
+  color: 'white' | 'black';
+  connected: boolean;
+}
+
+export interface OnlineGameState extends GameState {
+  gameId?: string;
+  players: OnlinePlayer[];
+  isOnline: boolean;
+  myColor?: 'white' | 'black';
+  canMove: boolean;
+}

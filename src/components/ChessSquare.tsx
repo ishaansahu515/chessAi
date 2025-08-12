@@ -12,6 +12,7 @@ interface ChessSquareProps {
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
 }
 
 export function ChessSquare({
@@ -23,7 +24,8 @@ export function ChessSquare({
   onClick,
   onDragStart,
   onDragOver,
-  onDrop
+  onDrop,
+  onDragEnd
 }: ChessSquareProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -48,6 +50,16 @@ export function ChessSquare({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
+    
+    // Ensure the drop event has the correct coordinates
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Only proceed if the drop is within the square bounds
+    if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+      onDrop(e);
+    }
     onDrop(e);
   };
 
@@ -67,7 +79,8 @@ export function ChessSquare({
         <div
           draggable
           onDragStart={onDragStart}
-          className="z-10"
+          onDragEnd={onDragEnd}
+          className="z-10 w-full h-full flex items-center justify-center"
         >
           <ChessPiece piece={piece} />
         </div>
@@ -76,12 +89,12 @@ export function ChessSquare({
       {isPossibleMove && (
         <div 
           className={`
-            absolute inset-0 flex items-center justify-center
+            absolute inset-0 flex items-center justify-center pointer-events-none
             ${piece ? 'border-2 md:border-4 border-green-500 rounded-full' : ''}
           `}
         >
           {!piece && (
-            <div className="w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full opacity-60" />
+            <div className="w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full opacity-70" />
           )}
         </div>
       )}
