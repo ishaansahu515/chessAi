@@ -1,11 +1,14 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ChessBoard } from './components/ChessBoard';
 import { GameControls } from './components/GameControls';
 import { OnlineControls } from './components/OnlineControls';
 import { GameStatus } from './components/GameStatus';
+import { OnlineChessGame } from './components/OnlineChessGame';
+import { MainMenu } from './components/MainMenu';
 import { useChessGame } from './hooks/useChessGame';
 
-function App() {
+function OfflineChessGame() {
   const {
     gameState,
     gameMode,
@@ -94,6 +97,19 @@ function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<MainMenu />} />
+        <Route path="/offline" element={<OfflineChessGame />} />
+        <Route path="/game/:gameId" element={<OnlineChessGame />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

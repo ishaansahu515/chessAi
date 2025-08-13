@@ -26,7 +26,6 @@ export interface GameState {
   lastMove: [[number, number], [number, number]] | null;
 }
 
-export type GameMode = 'human-vs-human' | 'human-vs-ai';
 export type GameMode = 'human-vs-human' | 'human-vs-ai' | 'online-multiplayer';
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
 
@@ -42,4 +41,18 @@ export interface GameMessage {
   type: 'move' | 'reset' | 'join' | 'leave' | 'sync';
   gameId: string;
   data?: any;
+}
+export interface OnlinePlayer {
+  id: string;
+  name: string;
+  color: 'white' | 'black';
+  connected: boolean;
+}
+
+export interface OnlineGameState extends GameState {
+  gameId: string;
+  players: OnlinePlayer[];
+  isOnline: boolean;
+  myColor?: 'white' | 'black';
+  canMove: boolean;
 }

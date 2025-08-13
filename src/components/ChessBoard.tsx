@@ -19,6 +19,7 @@ export function ChessBoard({ gameState, onSquareClick, onMove }: ChessBoardProps
     if (piece && piece.color === gameState.turn) {
       setDraggedPiece({ from: [row, col], piece });
       e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', `${row},${col}`);
     } else {
       e.preventDefault();
     }
@@ -31,10 +32,26 @@ export function ChessBoard({ gameState, onSquareClick, onMove }: ChessBoardProps
 
   const handleDrop = (row: number, col: number) => (e: React.DragEvent) => {
     e.preventDefault();
-    if (draggedPiece) {
-      onMove(draggedPiece.from, [row, col]);
+    
+    // Get the dragged piece data
+    const dragData = e.dataTransfer.getData('text/plain');
+    if (!dragData || !draggedPiece) {
       setDraggedPiece(null);
+      return;
     }
+    
+    const [fromRow, fromCol] = dragData.split(',').map(Number);
+    
+    // Ensure we're dropping on a valid square
+    if (row >= 0 && row < 8 && col >= 0 && col < 8) {
+      onMove([fromRow, fromCol], [row, col]);
+    }
+    
+    setDraggedPiece(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedPiece(null);
   };
 
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -80,6 +97,7 @@ export function ChessBoard({ gameState, onSquareClick, onMove }: ChessBoardProps
                     onDragStart={handleDragStart(rowIndex, colIndex)}
                     onDragOver={handleDragOver}
                     onDrop={handleDrop(rowIndex, colIndex)}
+                    onDragEnd={handleDragEnd}
                   />
                 );
               })
