@@ -27,4 +27,19 @@ export interface GameState {
 }
 
 export type GameMode = 'human-vs-human' | 'human-vs-ai';
+export type GameMode = 'human-vs-human' | 'human-vs-ai' | 'online-multiplayer';
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
+
+export interface OnlineGameState {
+  gameId: string;
+  playerColor: PieceColor | null;
+  isConnected: boolean;
+  opponentConnected: boolean;
+  isHost: boolean;
+}
+
+export interface GameMessage {
+  type: 'move' | 'reset' | 'join' | 'leave' | 'sync';
+  gameId: string;
+  data?: any;
+}

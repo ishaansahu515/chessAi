@@ -1,7 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
-import { GameState, GameMode, AIDifficulty, PieceColor } from '../types/chess';
+import { GameState, GameMode, AIDifficulty, PieceColor, GameMessage } from '../types/chess';
 import { ChessGame } from '../utils/chessLogic';
 import { StockfishAI } from '../utils/stockfishAI';
+import { useOnlineGame } from './useOnlineGame';
+import { socketService } from '../utils/socketService';
 
 export function useChessGame() {
   const [chessGame] = useState(() => new ChessGame());
@@ -9,6 +11,7 @@ export function useChessGame() {
   const [gameMode, setGameMode] = useState<GameMode>('human-vs-human');
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>('medium');
   const [isAIThinking, setIsAIThinking] = useState(false);
+  const onlineGame = useOnlineGame();
 
   const [gameState, setGameState] = useState<GameState>(() => ({
     board: chessGame.getBoard(),
@@ -96,6 +99,11 @@ export function useChessGame() {
     const success = chessGame.makeMove(from, to);
     
     if (success) {
+      // Send move to online opponent if in online mode
+      if (gameMode === 'online-multiplayer' && onlineGame.onlineState.isConnected) {
+        onlineGame.sendMove(from, to);
+      }
+      
       setGameState(prev => ({
         ...prev,
         selectedSquare: null,
@@ -103,7 +111,7 @@ export function useChessGame() {
       }));
       updateGameState();
     }
-  }, [chessGame, updateGameState]);
+  }, [chessGame, updateGameState, gameMode, onlineGame]);
 
   const makeAIMove = useCallback(async () => {
     if (gameMode !== 'human-vs-ai' || gameState.turn !== 'b' || isAIThinking || gameState.isGameOver) {
@@ -153,6 +161,12 @@ export function useChessGame() {
 
   const resetGame = useCallback(() => {
     chessGame.reset();
+    
+    // Send reset to online opponent if in online mode
+    if (gameMode === 'online-multiplayer' && onlineGame.onlineState.isConnected) {
+      onlineGame.sendReset();
+    }
+    
     setGameState({
       board: chessGame.getBoard(),
       turn: chessGame.getTurn(),
@@ -165,7 +179,54 @@ export function useChessGame() {
       lastMove: null
     });
     setIsAIThinking(false);
-  }, [chessGame]);
+  }, [chessGame, gameMode, onlineGame]);
+
+  // Handle online game messages
+  useEffect(() => {
+    if (gameMode === 'online-multiplayer' && onlineGame.onlineState.isConnected) {
+      const handleGameMessage = (message: GameMessage) => {
+        switch (message.type) {
+          case 'move':
+            const { from, to } = message.data;
+            const success = chessGame.makeMove(from, to);
+            if (success) {
+              setGameState(prev => ({
+                ...prev,
+                selectedSquare: null,
+                possibleMoves: []
+              }));
+              updateGameState();
+            }
+            break;
+          case 'reset':
+            chessGame.reset();
+            setGameState({
+              board: chessGame.getBoard(),
+              turn: chessGame.getTurn(),
+              isGameOver: false,
+              winner: null,
+              selectedSquare: null,
+              possibleMoves: [],
+              moveHistory: [],
+              capturedPieces: { white: [], black: [] },
+              lastMove: null
+            });
+            break;
+        }
+      };
+
+      socketService.onGameMessage(handleGameMessage);
+    }
+  }, [gameMode, onlineGame.onlineState.isConnected, chessGame, updateGameState]);
+
+  // Prevent moves when it's not player's turn in online mode
+  const canMakeMove = useCallback((pieceColor: PieceColor) => {
+    if (gameMode === 'online-multiplayer') {
+      return onlineGame.onlineState.playerColor === pieceColor && 
+             onlineGame.onlineState.opponentConnected;
+    }
+    return true;
+  }, [gameMode, onlineGame.onlineState]);
 
   // Auto-make AI move when it's AI's turn
   useEffect(() => {
@@ -204,6 +265,8 @@ export function useChessGame() {
     aiDifficulty,
     setAIDifficulty,
     isAIThinking,
+    onlineGame,
+    canMakeMove,
     selectSquare,
     makeMove,
     resetGame
